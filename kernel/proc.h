@@ -108,4 +108,8 @@ struct proc {
   char exit_msg[32]; // Task 3 - Process exit message
   int ps_priority; // Task 5 - Process priority in the scheduler
   long long accumulator; // Task 5 - Process accumulator in the scheduler
+  int cfs_priority; // Task 6 - priority for cfs policy
+  int rtime; // Task 6 - run time
+  int stime; // Task 6 - sleep time
+  int retime; // Task 6 - runnable time
 };

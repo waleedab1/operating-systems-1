@@ -25,6 +25,9 @@ int sleep(int);
 int uptime(void);
 int memsize(void); // Task 2
 int set_ps_priority(int); // Task 5
+int set_cfs_priority(int); // Task 6
+int get_cfs_stats(int*, int*, int*, int*, int*); // Task 6
+
 
 // ulib.c
 int stat(const char*, struct stat*);

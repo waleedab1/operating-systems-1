@@ -8,7 +8,7 @@
 
 struct cpu cpus[NCPU];
 
-struct proc proc[NPROC];
+extern struct proc proc[NPROC];
 
 struct proc *initproc;
 
@@ -124,6 +124,15 @@ found:
   p->pid = allocpid();
   p->state = USED;
 
+  // init the ps priority
+  p->ps_priority = 5;
+  
+  // init the accumulator
+  p->accumulator = MinAccumulation();
+
+  // init the cfs priority
+  p->cfs_priority = 100;
+
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
     freeproc(p);
@@ -172,6 +181,10 @@ freeproc(struct proc *p)
   p->exit_msg[0] = 0;
   p->ps_priority = 0;
   p->accumulator = 0;
+  p->cfs_priority = 0; // Task 6 - priority for cfs policy
+  p->rtime = 0; // Task 6 - run time
+  p->stime = 0; // Task 6 - sleep time
+  p->retime = 0; // Task 6 - runnable time
 }
 
 // Create a user page table for a given process,
@@ -295,17 +308,11 @@ fork(void)
     release(&np->lock);
     return -1;
   }
+
   np->sz = p->sz;
 
-  // init the priority
-  np->ps_priority = 5;
-  
-  // init the accumulator
-  np->accumulator = MinAccumulation();
-  
-  // printf("Created process pid: %d (new) ~\n", np->pid);
-  // printf("Priority: %d\n", np->ps_priority);
-  // printf("Accumulator: %d\n", np->accumulator); 
+  // inheriting the cfs priority from parent
+  np->cfs_priority = p->cfs_priority;
 
   // copy saved user registers.
   *(np->trapframe) = *(p->trapframe);
@@ -491,6 +498,28 @@ struct proc* MinAccumulationProcess(){
     return min_proc;
 }
 
+// Helper function 3: Finds and returns the process with min vruntime of Runnable processes
+struct proc* MinVruntimeProcess(){
+  struct proc *p;
+  struct proc *min_proc = 0; // Task 6
+  for(p = proc; p < &proc[NPROC]; p++) {
+      acquire(&p->lock);
+      if(p->state == RUNNABLE){
+        if(min_proc == 0){
+          min_proc = p;
+        }
+        else if(min_proc != 0){
+          int vruntime1 = p->cfs_priority*(p->rtime/(p->rtime + p->retime + p->stime));
+          int vruntime2 = min_proc->cfs_priority*(min_proc->rtime/(min_proc->rtime + min_proc->retime + min_proc->stime));
+          if(vruntime1 < vruntime2)
+            min_proc = p;
+        }
+      }
+      release(&p->lock);
+    }
+    return min_proc;
+}
+
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
 // Scheduler never returns.  It loops, doing:
@@ -511,7 +540,7 @@ scheduler(void)
     intr_on();
     
     // Task 5 - accumulation priority policy
-    min_proc = MinAccumulationProcess(); // get process with minimum accumulation
+    min_proc = MinVruntimeProcess(); // get process with minimum accumulation
     if(min_proc != 0){
       p = min_proc;
       acquire(&p->lock);
@@ -657,6 +686,7 @@ kill(int pid)
       p->killed = 1;
       if(p->state == SLEEPING){
         // Wake process from sleep().
+        p->accumulator = MinAccumulation();
         p->state = RUNNABLE;
       }
       release(&p->lock);

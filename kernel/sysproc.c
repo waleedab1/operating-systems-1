@@ -133,3 +133,64 @@ sys_set_ps_priority(void)
   release(&p->lock);
   return 0;
 }
+
+uint64
+sys_set_cfs_priority(void)
+{
+  int n;
+  if(argint(0, &n) < 0)
+    return -1;
+
+  if(n > 2 || n < 0)
+    return -1;
+
+  struct proc *p = myproc();
+  acquire(&p->lock);
+  if(n == 2){
+    p->cfs_priority = 125;
+  }
+  else if(n == 1){
+    p->cfs_priority = 100;
+  }
+  else{
+    p->cfs_priority = 75;
+  }
+  release(&p->lock);
+  return 0;
+}
+
+uint64
+sys_get_cfs_stats(void)
+{
+  uint64 pid_addr;
+  uint64 priority_addr;
+  uint64 rtime_addr;
+  uint64 stime_addr;
+  uint64 retime_addr;
+
+  if(argaddr(0, &pid_addr) < 0)
+    return -1;
+  if(argaddr(1, &priority_addr) < 0)
+    return -1;
+  if(argaddr(2, &rtime_addr) < 0)
+    return -1;
+  if(argaddr(3, &stime_addr) < 0)
+    return -1;
+  if(argaddr(4, &retime_addr) < 0)
+    return -1;
+
+  struct proc *p = myproc();
+  acquire(&p->lock);
+  if(pid_addr != 0 && copyout(p->pagetable, pid_addr, (char*)&p->pid, sizeof(p->pid)) < 0)
+    return -1;
+  if(priority_addr != 0 && copyout(p->pagetable, priority_addr, (char*)&p->cfs_priority, sizeof(p->cfs_priority)) < 0)
+    return -1;
+  if(rtime_addr != 0 && copyout(p->pagetable, rtime_addr, (char*)&p->rtime, sizeof(p->rtime)) < 0)
+    return -1;
+  if(stime_addr != 0 && copyout(p->pagetable, stime_addr, (char*)&p->stime, sizeof(p->stime)) < 0)
+    return -1;
+  if(retime_addr != 0 && copyout(p->pagetable, retime_addr, (char*)&p->retime, sizeof(p->retime)) < 0)
+    return -1;   
+  release(&p->lock);
+  return 0;
+}

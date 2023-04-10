@@ -9,6 +9,9 @@
 struct spinlock tickslock;
 uint ticks;
 
+// Added for task 6 - in general to allow us to know other processes
+struct proc proc[NPROC];
+
 extern char trampoline[], uservec[], userret[];
 
 // in kernelvec.S, calls kerneltrap().
@@ -79,14 +82,9 @@ usertrap(void)
   // give up the CPU if this is a timer interrupt.
   if(which_dev == 2){
     yield();
-    
-    if(myproc() != 0 && myproc()->state == RUNNING){
-      // Task 5 - handling timeout
-      struct proc *p = myproc();
-      acquire(&p->lock);
-      p->accumulator += p->ps_priority;
-      release(&p->lock);
-    }
+
+    // Task 5 - handling timeout
+    myproc()->accumulator += myproc()->ps_priority;
   }
 
   usertrapret();
@@ -161,11 +159,9 @@ kerneltrap()
   // give up the CPU if this is a timer interrupt.
   if(which_dev == 2 && myproc() != 0 && myproc()->state == RUNNING){
     yield();
+
     // Task 5 - handling timeout
-    struct proc *p = myproc();
-    acquire(&p->lock);
-    p->accumulator += p->ps_priority;
-    release(&p->lock);
+    myproc()->accumulator += myproc()->ps_priority;
   }
 
   // the yield() may have caused some traps to occur,
@@ -179,6 +175,23 @@ clockintr()
 {
   acquire(&tickslock);
   ticks++;
+  struct proc *p;
+  for(p = proc; p < &proc[NPROC]; p++) {
+      acquire(&p->lock);
+      if(p->state == RUNNABLE){
+        p->retime++;
+        //printf("pid: %d, retime: %d\n", p->pid, p->retime);
+      }
+      if(p->state == RUNNING){
+        p->rtime++;
+        //printf("pid: %d, rtime: %d\n", p->pid, p->rtime);
+      }
+      if(p->state == SLEEPING){
+        p->stime++;
+        //printf("pid: %d, stime: %d\n", p->pid, p->stime);
+      }
+      release(&p->lock);
+  }
   wakeup(&ticks);
   release(&tickslock);
 }
