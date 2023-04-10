@@ -5,9 +5,16 @@
 int
 main(int argc, char *argv[])
 {   
-    int n = 10;
+    int n = 3;
     int max_iter = 1000000;
     int rest = 100000;
+    if(argc > 2)
+        exit(1, "Invalid number of arguments\n");
+    if(argc == 2){
+        n = atoi(argv[1]);
+        n = n < 0 ? 3 : n;
+    }
+
     for(int i = 0; i < n; i++) // loop will run n times
     {
         if(fork() == 0)

@@ -140,7 +140,6 @@ sys_set_cfs_priority(void)
   int n;
   if(argint(0, &n) < 0)
     return -1;
-
   if(n > 2 || n < 0)
     return -1;
 
@@ -192,5 +191,17 @@ sys_get_cfs_stats(void)
   if(retime_addr != 0 && copyout(p->pagetable, retime_addr, (char*)&p->retime, sizeof(p->retime)) < 0)
     return -1;   
   release(&p->lock);
+  return 0;
+}
+
+uint64
+sys_set_policy(void)
+{
+  int n;
+  if(argint(0, &n) < 0)
+    return -1;
+  if(n > 2 || n < 0)
+    return -1;
+  set_policy(n);
   return 0;
 }

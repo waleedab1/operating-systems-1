@@ -18,9 +18,12 @@ struct spinlock pid_lock;
 extern void forkret(void);
 static void freeproc(struct proc *p);
 
-//helper functions for task 5
+// Helper functions for task 5
 int MinAccumulation(void);
 struct proc* MinAccumulationProcess(void);
+
+// current Policy
+int sched_policy = 1;
 
 extern char trampoline[]; // trampoline.S
 
@@ -480,7 +483,7 @@ int MinAccumulation(){
 }
 
 // Helper function 2: Finds and returns the process with min accumulation of Runnable processes
-struct proc* MinAccumulationProcess(){
+struct proc* PSPolicy(){
   struct proc *p;
   struct proc *min_proc = 0; // Task 5
   for(p = proc; p < &proc[NPROC]; p++) {
@@ -499,7 +502,7 @@ struct proc* MinAccumulationProcess(){
 }
 
 // Helper function 3: Finds and returns the process with min vruntime of Runnable processes
-struct proc* MinVruntimeProcess(){
+struct proc* CFSPolicy(){
   struct proc *p;
   struct proc *min_proc = 0; // Task 6
   for(p = proc; p < &proc[NPROC]; p++) {
@@ -520,29 +523,12 @@ struct proc* MinVruntimeProcess(){
     return min_proc;
 }
 
-// Per-CPU process scheduler.
-// Each CPU calls scheduler() after setting itself up.
-// Scheduler never returns.  It loops, doing:
-//  - choose a process to run.
-//  - swtch to start running that process.
-//  - eventually that process transfers control
-//    via swtch back to the scheduler.
-void
-scheduler(void)
-{
-  struct proc *p;
+// Helper function 4: Finds and returns the next runnable process
+void DefaultPolicy(){
   struct cpu *c = mycpu();
-  struct proc *min_proc = 0; // Task 5
-
+  struct proc *p = 0;
   c->proc = 0;
-  for(;;){
-    // Avoid deadlock by ensuring that devices can interrupt.
-    intr_on();
-    
-    // Task 5 - accumulation priority policy
-    min_proc = MinVruntimeProcess(); // get process with minimum accumulation
-    if(min_proc != 0){
-      p = min_proc;
+  for(p = proc; p < &proc[NPROC]; p++) {
       acquire(&p->lock);
       if(p->state == RUNNABLE) {
         // Switch to chosen process.  It is the process's job
@@ -556,8 +542,63 @@ scheduler(void)
         c->proc = 0;
       }
       release(&p->lock);
-      min_proc = 0;
     }
+}
+
+void RunPolicy(){
+  struct cpu *c = mycpu();
+  struct proc *p = 0;
+  c->proc = 0;
+
+  if(sched_policy == 0)
+    DefaultPolicy();
+  else{
+    if(sched_policy == 1){
+      p = PSPolicy();
+    }
+    else if(sched_policy == 2){
+      p = CFSPolicy();
+    }
+    if(p != 0){
+      acquire(&p->lock);
+      if(p->state == RUNNABLE) {
+        // Switch to chosen process.  It is the process's job
+        // to release its lock and then reacquire it
+        // before jumping back to us.
+        p->state = RUNNING;
+        c->proc = p;
+        swtch(&c->context, &p->context);
+        // Process is done running for now.
+        // It should have changed its p->state before coming back.
+        c->proc = 0;
+      }
+      release(&p->lock);
+      p = 0;
+    }
+  }
+}
+
+// Helper function 4: updates the current sche policy
+void set_policy(int n){
+  sched_policy = n;
+}
+
+
+
+// Per-CPU process scheduler.
+// Each CPU calls scheduler() after setting itself up.
+// Scheduler never returns.  It loops, doing:
+//  - choose a process to run.
+//  - swtch to start running that process.
+//  - eventually that process transfers control
+//    via swtch back to the scheduler.
+void
+scheduler(void)
+{
+  for(;;){
+    // Avoid deadlock by ensuring that devices can interrupt.
+    intr_on();
+    RunPolicy();
   }
 }
 
