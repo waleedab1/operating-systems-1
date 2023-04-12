@@ -6,8 +6,8 @@ int
 main(int argc, char *argv[])
 {   
     int n = 3;
-    int max_iter = 1000000;
-    int rest = 100000;
+    int max_iter = 100000000;
+    int rest = 10000000;
     if(argc > 2)
         exit(1, "Invalid number of arguments\n");
     if(argc == 2){
@@ -25,14 +25,15 @@ main(int argc, char *argv[])
             int stime;
             int retime;
             set_cfs_priority(i%3);
-            sleep(10 + i*20);
+            sleep(i*10);
             for(int j = 0; j < max_iter; j++){
                 if(j % rest == 0){
                     sleep(1);
                     get_cfs_stats(&pid, &priority, &rtime, &stime, &retime);
-                    printf("pid: %d\tpriority: %d\trtime: %d\tstime: %d\tretime: %d\n", pid, priority, rtime, stime, retime);
                 }
             }
+            get_cfs_stats(&pid, &priority, &rtime, &stime, &retime);
+            printf("pid: %d\tpriority: %d\trtime: %d\tstime: %d\tretime: %d\n", pid, priority, rtime, stime, retime);
             exit(0, "");
         }
     }
