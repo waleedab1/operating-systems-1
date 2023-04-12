@@ -134,7 +134,7 @@ found:
   p->accumulator = MinAccumulation();
 
   // init the cfs priority
-  p->cfs_priority = 100;
+  p->cfs_priority = 1;
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -512,8 +512,10 @@ struct proc* CFSPolicy(){
           min_proc = p;
         }
         else if(min_proc != 0){
-          int vruntime1 = p->cfs_priority*(p->rtime/(p->rtime + p->retime + p->stime));
-          int vruntime2 = min_proc->cfs_priority*(min_proc->rtime/(min_proc->rtime + min_proc->retime + min_proc->stime));
+          int p1 = p->cfs_priority == 2 ? 125 : (p->cfs_priority == 1 ? 100 : 75);
+          int p2 = min_proc->cfs_priority == 2 ? 125 : (min_proc->cfs_priority == 1 ? 100 : 75);
+          int vruntime1 = p1*(p->rtime/(p->rtime + p->retime + p->stime));
+          int vruntime2 = p2*(min_proc->rtime/(min_proc->rtime + min_proc->retime + min_proc->stime));
           if(vruntime1 < vruntime2)
             min_proc = p;
         }

@@ -10,5 +10,5 @@ main(int argc, char *argv[])
     int type = atoi(argv[1]);
     if(set_policy(type) < 0)
         exit(1, "Illegal argument type\n");
-    exit(0,"");
+    exit(0,"Policy has been changed!\n");
 }

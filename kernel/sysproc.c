@@ -145,15 +145,7 @@ sys_set_cfs_priority(void)
 
   struct proc *p = myproc();
   acquire(&p->lock);
-  if(n == 2){
-    p->cfs_priority = 125;
-  }
-  else if(n == 1){
-    p->cfs_priority = 100;
-  }
-  else{
-    p->cfs_priority = 75;
-  }
+  p->cfs_priority = n;
   release(&p->lock);
   return 0;
 }
